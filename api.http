@@ -4,4 +4,9 @@ http://localhost:8000/api/auth/verify-email
 http://localhost:8000/api/auth/forget-password
 http://localhost:8000/api/auth/reset-password
 
+
+http://localhost:8000/api/auth/verify-email  //first for sending otp to email
+
+http://localhost:8000/api/auth/verify  // for verifing the email
+
 all are post requests  
