@@ -15,6 +15,12 @@ router.post('/forgot-password', authC.forgotPassword);
 
 router.post('/reset-password', authC.resetPassword);
 
-router.post('/verify-email', authC.verifyEmail);
+//router.post('/verify-email', authC.verifyEmail);
+
+router.post('/verify-email', authC.sendOtpForVerification);
+
+router.post('/verify', authC.verifyOtp);
+
+
 
 module.exports = router;
