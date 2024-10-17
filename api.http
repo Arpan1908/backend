@@ -1,0 +1,7 @@
+http://localhost:8000/api/auth/register
+http://localhost:8000/api/auth/login
+http://localhost:8000/api/auth/verify-email
+http://localhost:8000/api/auth/forget-password
+http://localhost:8000/api/auth/reset-password
+
+all are post requests  
