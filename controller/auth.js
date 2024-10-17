@@ -15,48 +15,36 @@ const generateOTP = () => {
 };
 
 
+
+
 const register = async (req, res) => {
-  const { firstName, lastName, email, password } = req.body;
-
-  try {
-    // Check if user already exists
-    const userExists = await User.findOne({ email });
-    if (userExists) return res.status(400).json({ message: 'User already exists' });
-
-    // Hash the password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Generate OTP for email verification
-    const otp = generateOTP();
-    const otpExpires = Date.now() + 5 * 60 * 1000; // OTP valid for 5 minutes
-
-    // Create a new user but don't save it until OTP is verified
-    const newUser = new User({
-      firstName,
-      lastName,
-      email,
-      password: hashedPassword,
-      verified: false, // Mark user as not verified
-      otp,
-      otpExpires
-    });
-
-    // Send OTP email
-    await transport.sendMail({
-      to: email,
-      subject: 'Verify your email',
-      html: `<h2>Email Verification</h2>
-             <p>Your OTP is: <b>${otp}</b>. It is valid for 5 minutes.</p>`,
-    });
-
-    // Save user with OTP (without marking as verified)
-    await newUser.save();
-
-    res.status(200).json({ message: 'OTP sent to your email for verification' });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error', error });
-  }
-};
+    const { firstName, lastName, email, password } = req.body;
+  
+    try {
+      // Find the user by email
+      const user = await User.findOne({ email });
+      if (!user) return res.status(400).json({ message: 'Email is not verified. Please verify your email first.' });
+  
+      // Check if the email is verified
+      if (!user.verified) {
+        return res.status(400).json({ message: 'Please verify your email before registering.' });
+      }
+  
+      // Hash the password
+      const hashedPassword = await bcrypt.hash(password, 10);
+  
+      // Update the user's details
+      user.firstName = firstName;
+      user.lastName = lastName;
+      user.password = hashedPassword;
+      await user.save();
+  
+      res.status(201).json({ message: 'Registration successful' });
+    } catch (error) {
+      res.status(500).json({ message: 'Server error', error });
+    }
+  };
+  
 
 
 const verifyEmail = async (req, res) => {
@@ -183,6 +171,75 @@ const resetPassword = async (req, res) => {
       res.status(500).json({ message: 'Server error', error });
     }
   };
+
+
+
+  const sendOtpForVerification = async (req, res) => {
+    const { email } = req.body;
+  
+    try {
+      // Check if user already exists
+      const user = await User.findOne({ email });
+      if (user) {
+        return res.status(400).json({ message: 'Email is already registered' });
+      }
+  
+      // Generate OTP and expiration time
+      const otp = generateOTP();
+      const otpExpires = Date.now() + 5 * 60 * 1000; // OTP valid for 5 minutes
+  
+      // Create temporary user record with OTP (not verified yet)
+      const newUser = new User({
+        email,
+        otp,
+        otpExpires,
+        verified: false, // Not verified yet
+      });
+  
+      // Save the user with OTP
+      await newUser.save();
+  
+      // Send OTP to the user's email
+      await transport.sendMail({
+        to: email,
+        subject: 'Email Verification OTP',
+        html: `<h2>Email Verification</h2>
+               <p>Your OTP is: <b>${otp}</b>. It is valid for 5 minutes.</p>`,
+      });
+  
+      res.status(200).json({ message: 'OTP sent to email' });
+    } catch (error) {
+      res.status(500).json({ message: 'Server error', error });
+    }
+  };
+  
+  // Verify OTP and Mark Email as Verified
+  const verifyOtp = async (req, res) => {
+    const { email, otp } = req.body;
+  
+    try {
+      // Find the user by email
+      const user = await User.findOne({ email });
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+  
+      // Check if OTP is correct and not expired
+      if (user.otp !== otp || user.expiry < Date.now()) {
+        return res.status(400).json({ message: 'Invalid or expired OTP' });
+      }
+  
+      // Mark the user as verified
+      user.verified = true;
+      user.otp = undefined; // Clear OTP
+      user.expiry = undefined; // Clear OTP expiration
+      await user.save();
+  
+      res.status(200).json({ message: 'Email verified successfully' });
+    } catch (error) {
+      res.status(500).json({ message: 'Server error', error });
+    }
+  };
   
 
 module.exports = {
@@ -190,6 +247,8 @@ module.exports = {
   login,
   forgotPassword,
   resetPassword,
-  verifyEmail
+  verifyEmail,
+  sendOtpForVerification,
+  verifyOtp
 };
 
