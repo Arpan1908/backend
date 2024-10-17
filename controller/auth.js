@@ -165,7 +165,7 @@ const resetPassword = async (req, res) => {
       if (!user) return res.status(404).json({ message: 'User not found' });
   
       // Check if OTP is valid
-      if (user.resetPasswordOtp !== otp || user.expiry < Date.now()) {
+      if (user.otp !== otp || user.expiry < Date.now()) {
         return res.status(400).json({ message: 'Invalid or expired OTP' });
       }
   
